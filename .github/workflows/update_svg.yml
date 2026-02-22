@@ -1,0 +1,43 @@
+name: Update GitHub Stats SVGs
+
+on:
+  schedule:
+    - cron: '0 7 * * *'  # Midnight Arizona (MST, UTC-7)
+  workflow_dispatch:     # Allow manual trigger from the Actions tab
+
+jobs:
+  update-svgs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.ACCESS_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install requests python-dateutil lxml
+
+      - name: Create cache directory
+        run: mkdir -p cache
+
+      - name: Run today.py
+        env:
+          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+          USER_NAME: ${{ secrets.USER_NAME }}
+        run: python today.py
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add dark_mode.svg light_mode.svg cache/
+          git diff --staged --quiet || git commit -m "Update GitHub stats SVGs [skip ci]"
+          git push
